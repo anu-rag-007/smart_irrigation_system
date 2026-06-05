@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Irrigation Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root {
+  --bg:#08120a; --bg2:#0e1a0f; --bg3:#142016; --bg4:#1a2a1c;
+  --green:#5db843; --green2:#3a8a28; --green-dim:rgba(93,184,67,0.12);
+  --amber:#e8a020; --amber-dim:rgba(232,160,32,0.15);
+  --red:#e04040; --red-dim:rgba(224,64,64,0.13);
+  --blue:#3ab0e8; --blue-dim:rgba(58,176,232,0.13);
+  --text:#c8e8b0; --text2:#6a9a50; --text3:#3a5a28;
+  --mono:'DM Mono',monospace; --sans:'Outfit',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;overflow-x:hidden}
+
+/* scanlines */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:9999}
+
+/* grid bg */
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(93,184,67,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(93,184,67,0.04) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+
+.shell{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 20px 60px;display:flex;flex-direction:column;gap:16px}
+
+/* ── TOP BAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0 0;flex-wrap:wrap;gap:10px}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand-title{font-size:20px;font-weight:700;color:var(--green);letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.8s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px var(--green)}50%{opacity:.3;box-shadow:none}}
+.brand-sub{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* connect button */
+.connect-btn{display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:8px;border:1px solid var(--green2);background:var(--green-dim);color:var(--green);font-family:var(--mono);font-size:13px;cursor:pointer;transition:all .2s}
+.connect-btn:hover{background:rgba(93,184,67,.2);border-color:var(--green)}
+.connect-btn.connected{border-color:var(--green);background:rgba(93,184,67,.15)}
+.connect-btn.disconnected{border-color:var(--red);background:var(--red-dim);color:var(--red)}
+.connect-btn .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 2s ease-in-out infinite}
+.connect-btn.disconnected .dot{animation:none}
+
+/* cal badge */
+.cal-badge{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-family:var(--mono);font-size:11px;cursor:pointer;border:1px solid;transition:all .2s}
+.cal-badge.pending{background:var(--amber-dim);border-color:rgba(232,160,32,.4);color:var(--amber);animation:pulse-amber 2s ease-in-out infinite}
+.cal-badge.done{background:var(--green-dim);border-color:rgba(93,184,67,.4);color:var(--green)}
+@keyframes pulse-amber{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ── STATUS STRIP ── */
+.status-strip{display:flex;align-items:center;gap:20px;padding:8px 14px;background:var(--bg2);border:1px solid rgba(93,184,67,.1);border-radius:8px;font-family:var(--mono);font-size:11px;flex-wrap:wrap}
+.ss-item{display:flex;align-items:center;gap:6px}
+.ss-label{color:var(--text3)}
+.ss-val{font-weight:500;color:var(--green)}
+.ss-divider{width:1px;height:14px;background:rgba(93,184,67,.15)}
+
+/* ── ALARM ── */
+.alarm{display:none;align-items:center;gap:12px;background:var(--red-dim);border:1px solid rgba(224,64,64,.5);border-radius:10px;padding:14px 18px;animation:shake .4s ease}
+.alarm.show{display:flex}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.alarm-icon{font-size:22px;color:var(--red);animation:ring .45s ease infinite alternate}
+@keyframes ring{from{transform:rotate(-18deg)}to{transform:rotate(18deg)}}
+.alarm-body{flex:1}
+.alarm-title{font-size:15px;font-weight:600;color:var(--red);margin-bottom:2px}
+.alarm-sub{font-size:11px;color:rgba(224,64,64,.7);font-family:var(--mono)}
+.alarm-dismiss{padding:7px 14px;border-radius:6px;border:1px solid rgba(224,64,64,.4);background:transparent;color:var(--red);font-family:var(--mono);font-size:12px;cursor:pointer;transition:background .2s}
+.alarm-dismiss:hover{background:rgba(224,64,64,.1)}
+
+/* ── METRICS GRID ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.metric{background:var(--bg2);border:1px solid rgba(93,184,67,.1);border-radius:10px;padding:14px 16px;transition:border-color .3s;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);opacity:.15;transition:opacity .3s}
+.metric.active::before{opacity:.7}
+.metric-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.metric-val{font-size:26px;font-weight:700;color:var(--green);line-height:1;font-family:var(--mono);transition:color .4s}
+.metric-unit{font-size:13px;color:var(--text2);font-weight:400}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:5px;font-family:var(--mono)}
+
+/* ── MAIN GRID ── */
+.main-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:700px){.main-grid{grid-template-columns:1fr}}
+.panel{background:var(--bg2);border:1px solid rgba(93,184,67,.1);border-radius:12px;padding:16px;transition:border-color .3s}
+.panel:hover{border-color:rgba(93,184,67,.2)}
+.panel-title{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--text3);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.panel-title i{font-size:14px;color:var(--green)}
+
+/* ── GAUGE ── */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.gauge-val{font-family:var(--mono);font-size:38px;font-weight:700;transition:color .4s;text-align:center;line-height:1}
+.gauge-label{font-family:var(--mono);font-size:11px;color:var(--text2);text-align:center}
+.gauge-zone{font-size:12px;text-align:center;margin-top:4px;padding:3px 10px;border-radius:12px;font-family:var(--mono);border:1px solid currentColor}
+.range-row{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.range-pill{padding:2px 8px;border-radius:10px;background:var(--green-dim);border:1px solid rgba(93,184,67,.3);color:var(--green);font-size:11px}
+
+/* ── PLANT VIS ── */
+.plant-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.plant-name{font-size:14px;font-weight:600;text-align:center}
+.plant-desc{font-size:11px;text-align:center;font-family:var(--mono)}
+.plant-tip{font-size:11px;text-align:center;font-family:var(--mono);color:var(--amber)}
+
+/* pump badge */
+.pump-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:8px;font-family:var(--mono);font-size:12px;transition:all .3s;margin-top:4px}
+.pump-badge.off{background:var(--bg3);border:1px solid rgba(93,184,67,.15);color:var(--text3)}
+.pump-badge.on{background:var(--blue-dim);border:1px solid rgba(58,176,232,.3);color:var(--blue)}
+.pump-badge .pdot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pump-badge.on .pdot{animation:blink .7s ease-in-out infinite}
+
+/* water drops animation */
+.drop{transition:opacity .5s}
+
+/* ── FLOW DIAGRAM ── */
+.flow-panel{grid-column:1/-1}
+.flow-wrap{display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:8px;padding:4px 0}
+.flow-node{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:80px}
+.flow-box{width:72px;height:72px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px solid;transition:all .4s;position:relative;overflow:hidden}
+.flow-box i{font-size:24px;transition:transform .3s}
+.flow-box.active{animation:node-pulse .8s ease-in-out infinite alternate}
+@keyframes node-pulse{from{box-shadow:none}to{box-shadow:0 0 12px currentColor}}
+.flow-box-label{font-family:var(--mono);font-size:10px;text-align:center;line-height:1.3}
+.flow-arrow{font-size:18px;color:var(--text3);flex-shrink:0;transition:color .4s}
+.flow-arrow.active{color:var(--green);animation:arrow-blink .6s ease-in-out infinite alternate}
+@keyframes arrow-blink{from{opacity:.4}to{opacity:1}}
+
+/* ── CHART ── */
+.chart-panel{grid-column:1/-1}
+
+/* ── CROP SELECTOR ── */
+.crop-section{background:var(--bg2);border:1px solid rgba(93,184,67,.1);border-radius:12px;padding:16px}
+.crop-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.crop-icon{width:32px;height:32px;border-radius:8px;background:var(--green-dim);border:1px solid rgba(93,184,67,.3);display:flex;align-items:center;justify-content:center;font-size:16px}
+.crop-title{font-size:14px;font-weight:500}
+.crop-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.cat-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.cat-btn{padding:6px 13px;border-radius:20px;border:1px solid rgba(93,184,67,.2);background:transparent;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px}
+.cat-btn:hover,.cat-btn.active{border-color:var(--green);background:var(--green-dim);color:var(--green)}
+.crop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+.crop-card{padding:10px 12px;border-radius:10px;border:1px solid rgba(93,184,67,.15);background:var(--bg3);cursor:pointer;transition:all .2s}
+.crop-card:hover,.crop-card.active{border-color:var(--green);background:var(--green-dim)}
+.crop-emoji{font-size:18px;margin-bottom:3px}
+.crop-name{font-size:13px;font-weight:500}
+.crop-latin{font-size:10px;color:var(--text3);font-family:var(--mono)}
+
+/* crop info */
+.crop-info{background:var(--bg3);border:1px solid rgba(93,184,67,.18);border-radius:10px;padding:14px;display:none}
+.crop-info.show{display:block}
+.crop-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:10px}
+.ci-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.ci-val{font-size:13px;font-weight:500;color:var(--green)}
+.ci-sub{font-size:11px;color:var(--text2)}
+.mbar-track{height:10px;background:var(--bg);border-radius:5px;position:relative;border:1px solid rgba(93,184,67,.15);margin:8px 0}
+.mbar-fill{height:100%;border-radius:5px;background:var(--green);transition:width .5s}
+.mbar-marker{position:absolute;top:-5px;height:20px;width:2px;background:var(--red);border-radius:1px;transition:left .4s}
+.mbar-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);font-family:var(--mono)}
+
+/* ── LOG ── */
+.log-panel{grid-column:1/-1}
+.log-scroll{max-height:160px;overflow-y:auto}
+.log-scroll::-webkit-scrollbar{width:3px}
+.log-scroll::-webkit-scrollbar-thumb{background:rgba(93,184,67,.2);border-radius:2px}
+.log-entry{display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid rgba(93,184,67,.06);font-family:var(--mono);font-size:11px}
+.log-entry:last-child{border-bottom:none}
+.log-time{color:var(--text3);min-width:58px;flex-shrink:0}
+.log-msg{flex:1}
+.log-entry.danger .log-msg{color:var(--red)}
+.log-entry.success .log-msg{color:var(--green)}
+.log-entry.info .log-msg{color:var(--blue)}
+.log-entry.warn .log-msg{color:var(--amber)}
+.log-entry.muted .log-msg{color:var(--text3)}
+
+/* ── CALIBRATION MODAL ── */
+.modal-wrap{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal-wrap.hidden{display:none}
+.modal{background:var(--bg2);border:1px solid rgba(93,184,67,.25);border-radius:16px;padding:28px;width:100%;max-width:460px}
+.modal-title{font-size:20px;font-weight:700;color:var(--green);margin-bottom:5px}
+.modal-sub{font-size:12px;color:var(--text2);margin-bottom:22px;font-family:var(--mono)}
+.cal-steps{display:flex;gap:6px;margin-bottom:22px}
+.csd{flex:1;height:3px;border-radius:2px;background:var(--bg3);transition:background .4s}
+.csd.done{background:var(--green)}.csd.active{background:var(--amber)}
+.cal-box{background:var(--bg3);border:1px solid rgba(93,184,67,.18);border-radius:12px;padding:20px;margin-bottom:18px;text-align:center}
+.cal-icon{font-size:44px;margin-bottom:10px}
+.cal-btitle{font-size:15px;font-weight:600;margin-bottom:6px}
+.cal-bdesc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6}
+.cal-live-val{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--amber);margin-bottom:4px}
+.cal-live-lbl{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.cal-bar{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;margin:10px 0;border:1px solid rgba(93,184,67,.12)}
+.cal-bar-fill{height:100%;border-radius:4px;background:var(--amber);transition:width .3s}
+.cal-prog{font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:5px}
+.cal-saved{background:var(--green-dim);border:1px solid rgba(93,184,67,.3);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--mono);font-size:11px;color:var(--green);display:none}
+.modal-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;border:1px solid}
+.btn-g{background:var(--green-dim);border-color:rgba(93,184,67,.4);color:var(--green)}
+.btn-g:hover{background:rgba(93,184,67,.2);border-color:var(--green)}
+.btn-g:disabled{opacity:.35;cursor:not-allowed}
+.btn-a{background:var(--amber-dim);border-color:rgba(232,160,32,.4);color:var(--amber)}
+.btn-a:hover{background:rgba(232,160,32,.22)}
+.btn-a:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{background:transparent;border-color:rgba(93,184,67,.2);color:var(--text3)}
+.btn-ghost:hover{color:var(--text2)}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.result-box{background:var(--bg);border-radius:8px;padding:10px;text-align:center}
+.result-lbl{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;margin-bottom:4px}
+.result-num{font-size:24px;font-family:var(--mono);font-weight:700}
+
+#no-serial{display:none;background:var(--amber-dim);border:1px solid rgba(232,160,32,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amber);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Smart irrigation dashboard — live soil moisture monitoring with crop-specific thresholds and auto-calibration</h2>
+
+<!-- CALIBRATION MODAL -->
+<div class="modal-wrap hidden" id="cal-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-target" aria-hidden="true"></i> Auto-Calibration</div>
+    <div class="modal-sub" id="cal-modal-sub">30 seconds · done once · saved automatically</div>
+    <div class="cal-steps"><div class="csd active" id="csd0"></div><div class="csd" id="csd1"></div><div class="csd" id="csd2"></div></div>
+
+    <div id="cs0">
+      <div class="cal-saved" id="cal-saved-row"><i class="ti ti-check" aria-hidden="true"></i><span id="cal-saved-txt"></span></div>
+      <div class="cal-box">
+        <div class="cal-icon"><i class="ti ti-adjustments-alt" aria-hidden="true" style="font-size:44px;color:var(--green)"></i></div>
+        <div class="cal-btitle">What is calibration?</div>
+        <div class="cal-bdesc">Every sensor reads differently. Calibration teaches the dashboard your sensor's exact dry and wet values so moisture % is always accurate — no manual adjustments ever.</div>
+      </div>
+      <div id="no-cal-serial" style="display:none;font-family:var(--mono);font-size:11px;color:var(--amber);margin-bottom:14px;padding:8px;background:var(--amber-dim);border-radius:6px;border:1px solid rgba(232,160,32,.3)">Connect Arduino first, then calibrate.</div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCalModal()">Skip / use defaults</button>
+        <button class="btn btn-g" id="cal-start-btn" onclick="startCal()"><i class="ti ti-player-play" aria-hidden="true"></i> Start calibration</button>
+      </div>
+    </div>
+
+    <div id="cs1" style="display:none">
+      <div class="cal-box">
+        <div class="cal-icon">🏜️</div>
+        <div class="cal-btitle">Step 1 — Dry reading</div>
+        <div class="cal-bdesc">Hold probes in open air or completely dry soil. Wait for the value to stabilise then capture.</div>
+        <div class="cal-live-val" id="cal-dry-live">—</div>
+        <div class="cal-live-lbl">live raw value</div>
+        <div class="cal-bar"><div class="cal-bar-fill" id="cal-dry-bar" style="width:0%"></div></div>
+        <div class="cal-prog" id="cal-dry-prog">waiting for reading...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCalModal()">Cancel</button>
+        <button class="btn btn-a" id="cal-dry-btn" onclick="captureDry()" disabled><i class="ti ti-camera" aria-hidden="true"></i> Capture dry value</button>
+      </div>
+    </div>
+
+    <div id="cs2" style="display:none">
+      <div class="cal-box">
+        <div class="cal-icon">💧</div>
+        <div class="cal-btitle">Step 2 — Wet reading</div>
+        <div class="cal-bdesc">Dip probes into a glass of water or freshly watered wet soil. Wait for value to drop and stabilise.</div>
+        <div class="cal-live-val" id="cal-wet-live">—</div>
+        <div class="cal-live-lbl">live raw value</div>
+        <div class="cal-bar" style="background:var(--bg)"><div class="cal-bar-fill" id="cal-wet-bar" style="width:0%;background:var(--blue)"></div></div>
+        <div class="cal-prog" id="cal-wet-prog">waiting for reading...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="goCalStep(1)"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back</button>
+        <button class="btn btn-a" id="cal-wet-btn" onclick="captureWet()" disabled><i class="ti ti-camera" aria-hidden="true"></i> Capture wet value</button>
+      </div>
+    </div>
+
+    <div id="cs3" style="display:none">
+      <div class="cal-box" style="border-color:rgba(93,184,67,.4)">
+        <div class="cal-icon"><i class="ti ti-circle-check" aria-hidden="true" style="font-size:44px;color:var(--green)"></i></div>
+        <div class="cal-btitle" style="color:var(--green)">Calibration complete!</div>
+        <div class="cal-bdesc" id="cal-result-desc"></div>
+        <div class="result-grid">
+          <div class="result-box"><div class="result-lbl">Dry value</div><div class="result-num" id="r-dry" style="color:var(--amber)">—</div></div>
+          <div class="result-box"><div class="result-lbl">Wet value</div><div class="result-num" id="r-wet" style="color:var(--blue)">—</div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="goCalStep(1)">Redo</button>
+        <button class="btn btn-g" onclick="finishCal()"><i class="ti ti-check" aria-hidden="true"></i> Apply & monitor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-title"><span class="brand-dot"></span> Smart Irrigation Monitor</div>
+      <div class="brand-sub">Arshan · Anurag · Gaurav · Sahil · Jay &nbsp;|&nbsp; Environmental Impact Analysis</div>
+    </div>
+    <div class="topbar-right">
+      <div class="cal-badge pending" id="cal-badge" onclick="openCalModal()">
+        <i class="ti ti-adjustments" aria-hidden="true"></i>
+        <span id="cal-badge-lbl">Not calibrated</span>
+      </div>
+      <button class="connect-btn" id="connect-btn" onclick="toggleConn()">
+        <span class="dot"></span>
+        <span id="btn-lbl">Connect Arduino</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="no-serial">⚠ Web Serial not supported. Open this file in Google Chrome or Edge.</div>
+
+  <!-- CROP SELECTOR -->
+  <div class="crop-section">
+    <div class="crop-header">
+      <div class="crop-icon"><i class="ti ti-plant-2" aria-hidden="true" style="color:var(--green)"></i></div>
+      <div><div class="crop-title">Select your plant / crop</div><div class="crop-sub">thresholds & care tips auto-load per selection</div></div>
+    </div>
+    <div class="cat-row" id="cat-row"></div>
+    <div class="crop-grid" id="crop-grid"></div>
+    <div class="crop-info" id="crop-info">
+      <div class="crop-info-grid" id="crop-info-grid"></div>
+      <div class="ci-label" style="margin-bottom:5px">optimal moisture range</div>
+      <div class="mbar-track"><div class="mbar-fill" id="mbar-fill" style="width:0%"></div><div class="mbar-marker" id="mbar-marker" style="left:0%"></div></div>
+      <div class="mbar-labels"><span>0%</span><span id="mbar-mid">—</span><span>100%</span></div>
+    </div>
+  </div>
+
+  <!-- STATUS STRIP -->
+  <div class="status-strip">
+    <div class="ss-item"><i class="ti ti-wifi" aria-hidden="true" style="font-size:13px;color:var(--text3)"></i><span class="ss-label">connection</span><span class="ss-val" id="ss-conn">offline</span></div>
+    <div class="ss-divider"></div>
+    <div class="ss-item"><i class="ti ti-target" aria-hidden="true" style="font-size:13px;color:var(--text3)"></i><span class="ss-label">calibration</span><span style="font-weight:500;color:var(--amber)" id="ss-cal">not calibrated</span></div>
+    <div class="ss-divider"></div>
+    <div class="ss-item"><i class="ti ti-plant" aria-hidden="true" style="font-size:13px;color:var(--text3)"></i><span class="ss-label">crop</span><span class="ss-val" id="ss-crop">none selected</span></div>
+    <div class="ss-divider"></div>
+    <div class="ss-item"><i class="ti ti-droplet" aria-hidden="true" style="font-size:13px;color:var(--text3)"></i><span class="ss-label">pump trigger</span><span style="font-weight:500;color:var(--amber)" id="ss-thresh">—</span></div>
+    <div class="ss-divider"></div>
+    <div class="ss-item"><i class="ti ti-clock" aria-hidden="true" style="font-size:13px;color:var(--text3)"></i><span class="ss-label">last reading</span><span class="ss-val" id="ss-time">—</span></div>
+  </div>
+
+  <!-- ALARM -->
+  <div class="alarm" id="alarm" role="alert">
+    <i class="ti ti-bell-ringing alarm-icon" aria-hidden="true"></i>
+    <div class="alarm-body">
+      <div class="alarm-title" id="alarm-title">Plant needs water!</div>
+      <div class="alarm-sub" id="alarm-sub">moisture dropped below threshold — pump activated</div>
+    </div>
+    <button class="alarm-dismiss" onclick="dismissAlarm()">Dismiss</button>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics" id="metrics">
+    <div class="metric" id="m-raw-card">
+      <div class="metric-label"><i class="ti ti-wave-sine" aria-hidden="true"></i> Raw sensor</div>
+      <div class="metric-val" id="m-raw">—</div>
+      <div class="metric-sub">Arduino A0 (0–1023)</div>
+    </div>
+    <div class="metric" id="m-pct-card">
+      <div class="metric-label"><i class="ti ti-droplet" aria-hidden="true"></i> Moisture</div>
+      <div class="metric-val" id="m-pct">—<span class="metric-unit">%</span></div>
+      <div class="metric-sub" id="m-pct-sub">soil water content</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label"><i class="ti ti-target" aria-hidden="true"></i> Calibration</div>
+      <div class="metric-val" id="m-cal" style="font-size:16px;margin-top:4px">—</div>
+      <div class="metric-sub" id="m-cal-sub">dry / wet range</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label"><i class="ti ti-plant" aria-hidden="true"></i> Crop threshold</div>
+      <div class="metric-val" id="m-thresh" style="font-size:18px;margin-top:4px">—</div>
+      <div class="metric-sub" id="m-thresh-sub">select a crop above</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label"><i class="ti ti-clock" aria-hidden="true"></i> Last watered</div>
+      <div class="metric-val" id="m-watered" style="font-size:18px;margin-top:4px">—</div>
+      <div class="metric-sub">pump last activated</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label"><i class="ti ti-bell" aria-hidden="true"></i> Dry alerts</div>
+      <div class="metric-val" id="m-alerts">0</div>
+      <div class="metric-sub">times below threshold</div>
+    </div>
+  </div>
+
+  <!-- MAIN PANELS -->
+  <div class="main-grid">
+
+    <!-- GAUGE -->
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-gauge" aria-hidden="true"></i> Moisture gauge</div>
+      <div class="gauge-wrap">
+        <svg id="gsv" width="190" viewBox="0 0 200 120" role="img" aria-label="Semicircular moisture gauge">
+          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="#1a2e10" stroke-width="16" stroke-linecap="round"/>
+          <path id="g-danger" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgba(224,64,64,0.12)" stroke-width="16" stroke-linecap="round" stroke-dasharray="252" stroke-dashoffset="220"/>
+          <path id="g-opt" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgba(93,184,67,0.15)" stroke-width="16" stroke-linecap="round" stroke-dasharray="252" stroke-dashoffset="126"/>
+          <path id="g-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="#5db843" stroke-width="16" stroke-linecap="round" stroke-dasharray="252" stroke-dashoffset="252"/>
+          <text x="20" y="118" font-size="10" fill="#3a5a28" font-family="'DM Mono',monospace">0</text>
+          <text x="174" y="118" font-size="10" fill="#3a5a28" font-family="'DM Mono',monospace">100</text>
+          <text id="g-zone-txt" x="100" y="76" text-anchor="middle" font-size="9" fill="#3a5a28" font-family="'DM Mono',monospace">—</text>
+          <line id="g-needle" x1="100" y1="110" x2="100" y2="42" stroke="#5db843" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="100" cy="110" r="6" fill="#08120a" stroke="#5db843" stroke-width="2"/>
+        </svg>
+        <div class="gauge-val" id="g-val" style="color:var(--green)">—%</div>
+        <div class="gauge-zone" id="g-zone" style="color:var(--text3);border-color:var(--text3)">waiting</div>
+        <div class="range-row" id="range-row" style="display:none">target <span class="range-pill" id="range-pill">—</span></div>
+      </div>
+    </div>
+
+    <!-- PLANT -->
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-plant-2" aria-hidden="true"></i> Plant status</div>
+      <div class="plant-wrap">
+        <svg width="110" height="115" viewBox="0 0 110 115" role="img" aria-label="Plant health illustration">
+          <rect x="50" y="75" width="10" height="36" rx="3" fill="#4a3010"/>
+          <ellipse id="pl1" cx="55" cy="60" rx="23" ry="17" fill="#3B6D11"/>
+          <ellipse id="pl2" cx="36" cy="71" rx="16" ry="11" fill="#27500A"/>
+          <ellipse id="pl3" cx="74" cy="71" rx="16" ry="11" fill="#27500A"/>
+          <ellipse id="pd1" cx="30" cy="36" rx="4" ry="7" fill="#3ab0e8" opacity="0" class="drop"/>
+          <ellipse id="pd2" cx="55" cy="28" rx="4" ry="7" fill="#3ab0e8" opacity="0" class="drop"/>
+          <ellipse id="pd3" cx="80" cy="36" rx="4" ry="7" fill="#3ab0e8" opacity="0" class="drop"/>
+        </svg>
+        <div class="plant-name" id="plant-name" style="color:var(--green)">—</div>
+        <div class="plant-desc" id="plant-desc" style="color:var(--text2)">connect arduino to monitor</div>
+        <div class="plant-tip" id="plant-tip"></div>
+        <div class="pump-badge off" id="pump-badge">
+          <span class="pdot"></span>
+          <span id="pump-lbl">Pump off</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOW DIAGRAM -->
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-circuit-diode" aria-hidden="true"></i> System flow</div>
+      <div class="flow-wrap">
+        <div class="flow-node">
+          <div class="flow-box" id="fn-sensor" style="border-color:rgba(58,176,232,.3);color:var(--blue);background:var(--blue-dim)">
+            <i class="ti ti-antenna" aria-hidden="true"></i>
+          </div>
+          <div class="flow-box-label" style="color:var(--text2)">Soil<br>sensor</div>
+        </div>
+        <i class="ti ti-arrow-right flow-arrow" id="fa1" aria-hidden="true"></i>
+        <div class="flow-node">
+          <div class="flow-box" id="fn-arduino" style="border-color:rgba(93,184,67,.3);color:var(--green);background:var(--green-dim)">
+            <i class="ti ti-cpu" aria-hidden="true"></i>
+          </div>
+          <div class="flow-box-label" style="color:var(--text2)">Arduino<br>Uno</div>
+        </div>
+        <i class="ti ti-arrow-right flow-arrow" id="fa2" aria-hidden="true"></i>
+        <div class="flow-node">
+          <div class="flow-box" id="fn-relay" style="border-color:rgba(232,160,32,.3);color:var(--amber);background:var(--amber-dim)">
+            <i class="ti ti-switch" aria-hidden="true"></i>
+          </div>
+          <div class="flow-box-label" style="color:var(--text2)">Relay<br>module</div>
+        </div>
+        <i class="ti ti-arrow-right flow-arrow" id="fa3" aria-hidden="true"></i>
+        <div class="flow-node">
+          <div class="flow-box" id="fn-pump" style="border-color:rgba(93,184,67,.25);color:var(--green);background:var(--green-dim)">
+            <i class="ti ti-droplet" aria-hidden="true"></i>
+          </div>
+          <div class="flow-box-label" style="color:var(--text2)">Water<br>pump</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid rgba(93,184,67,.1)">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">System logic</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.7" id="logic-txt">
+          Sensor → Arduino reads every 2s<br>
+          If moisture &lt; threshold → pump ON<br>
+          If moisture ≥ threshold → pump OFF
+        </div>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="panel chart-panel">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span><i class="ti ti-chart-line" aria-hidden="true"></i> Live moisture history — last 40 readings</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text2)" id="chart-crop-lbl"></span>
+      </div>
+      <div style="position:relative;height:200px">
+        <canvas id="histChart" role="img" aria-label="Line chart showing soil moisture readings over time with threshold line"></canvas>
+      </div>
+      <div style="display:flex;gap:18px;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#5db843;display:inline-block"></span>moisture %</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#e04040;display:inline-block"></span>pump threshold</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#3ab0e8;display:inline-block;opacity:.5"></span>optimal zone</span>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel log-panel">
+      <div class="panel-title"><i class="ti ti-list-details" aria-hidden="true"></i> Event log</div>
+      <div class="log-scroll" id="log-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const CROPS = {
+  "Vegetables":[
+    {name:"Tomato",emoji:"🍅",latin:"Solanum lycopersicum",min:40,opt:60,max:80,watering:"Every 2–3 days",depth:"15–20 cm",tips:"Water at base. Inconsistent watering causes blossom-end rot."},
+    {name:"Potato",emoji:"🥔",latin:"Solanum tuberosum",min:50,opt:65,max:80,watering:"Every 3–4 days",depth:"20–30 cm",tips:"Critical during tuber formation."},
+    {name:"Onion",emoji:"🧅",latin:"Allium cepa",min:30,opt:50,max:65,watering:"Every 4–5 days",depth:"10–15 cm",tips:"Reduce watering 2 weeks before harvest."},
+    {name:"Spinach",emoji:"🥬",latin:"Spinacia oleracea",min:50,opt:70,max:85,watering:"Every 1–2 days",depth:"5–10 cm",tips:"Shallow roots — needs frequent light watering."},
+    {name:"Chilli",emoji:"🌶️",latin:"Capsicum annuum",min:35,opt:55,max:70,watering:"Every 2–3 days",depth:"15–20 cm",tips:"Drought-tolerant once established."},
+    {name:"Brinjal",emoji:"🍆",latin:"Solanum melongena",min:40,opt:60,max:75,watering:"Every 2–3 days",depth:"15–20 cm",tips:"Water deeply but infrequently."},
+    {name:"Carrot",emoji:"🥕",latin:"Daucus carota",min:35,opt:55,max:70,watering:"Every 3–4 days",depth:"20–30 cm",tips:"Deep watering encourages deep root growth."},
+    {name:"Cabbage",emoji:"🥦",latin:"Brassica oleracea",min:45,opt:65,max:80,watering:"Every 2–3 days",depth:"10–15 cm",tips:"Avoid waterlogging."},
+  ],
+  "Cereals & Pulses":[
+    {name:"Wheat",emoji:"🌾",latin:"Triticum aestivum",min:30,opt:50,max:65,watering:"Every 7–10 days",depth:"30–40 cm",tips:"Critical at tillering, jointing and grain fill."},
+    {name:"Rice",emoji:"🌾",latin:"Oryza sativa",min:75,opt:90,max:100,watering:"Continuous flooding",depth:"10–15 cm",tips:"Requires standing water 5–10 cm deep."},
+    {name:"Maize",emoji:"🌽",latin:"Zea mays",min:40,opt:60,max:75,watering:"Every 5–7 days",depth:"30–45 cm",tips:"Critical at tasseling and silking stages."},
+    {name:"Chickpea",emoji:"🫘",latin:"Cicer arietinum",min:25,opt:40,max:55,watering:"Every 10–14 days",depth:"30–60 cm",tips:"Drought-tolerant. Over-watering causes fungal disease."},
+    {name:"Soybean",emoji:"🫘",latin:"Glycine max",min:40,opt:60,max:75,watering:"Every 5–7 days",depth:"25–35 cm",tips:"Critical moisture at pod fill stage."},
+    {name:"Mustard",emoji:"🌿",latin:"Brassica juncea",min:25,opt:45,max:60,watering:"Every 10–15 days",depth:"20–30 cm",tips:"Only 1–2 irrigations usually needed."},
+  ],
+  "Fruits":[
+    {name:"Mango",emoji:"🥭",latin:"Mangifera indica",min:30,opt:50,max:65,watering:"Every 7–10 days",depth:"60–90 cm",tips:"Reduce water before flowering."},
+    {name:"Banana",emoji:"🍌",latin:"Musa acuminata",min:60,opt:75,max:90,watering:"Every 2–3 days",depth:"30–45 cm",tips:"High water requirement — 8–10L per day in heat."},
+    {name:"Papaya",emoji:"🍈",latin:"Carica papaya",min:40,opt:60,max:75,watering:"Every 3–4 days",depth:"30–40 cm",tips:"Cannot tolerate waterlogging."},
+    {name:"Guava",emoji:"🍐",latin:"Psidium guajava",min:30,opt:50,max:65,watering:"Every 5–7 days",depth:"40–60 cm",tips:"Drought-tolerant once mature."},
+    {name:"Watermelon",emoji:"🍉",latin:"Citrullus lanatus",min:35,opt:55,max:70,watering:"Every 3–4 days",depth:"30–40 cm",tips:"Reduce watering as fruit matures for sweetness."},
+    {name:"Strawberry",emoji:"🍓",latin:"Fragaria ananassa",min:50,opt:70,max:85,watering:"Every 1–2 days",depth:"5–10 cm",tips:"Very sensitive to dryness."},
+  ],
+  "Flowers & Indoor":[
+    {name:"Rose",emoji:"🌹",latin:"Rosa",min:35,opt:55,max:70,watering:"Every 2–3 days",depth:"30–40 cm",tips:"Water at base to avoid fungal issues."},
+    {name:"Sunflower",emoji:"🌻",latin:"Helianthus annuus",min:30,opt:50,max:65,watering:"Every 3–4 days",depth:"30–40 cm",tips:"Deep taproot — drought-tolerant."},
+    {name:"Tulsi",emoji:"🌿",latin:"Ocimum tenuiflorum",min:35,opt:55,max:70,watering:"Every 2–3 days",depth:"15–20 cm",tips:"Let soil dry slightly between waterings."},
+    {name:"Money Plant",emoji:"🪴",latin:"Epipremnum aureum",min:30,opt:50,max:65,watering:"Every 5–7 days",depth:"5–15 cm",tips:"Overwatering is the most common mistake."},
+    {name:"Aloe Vera",emoji:"🌵",latin:"Aloe barbadensis",min:10,opt:25,max:40,watering:"Every 14–21 days",depth:"10–20 cm",tips:"Water only when completely dry."},
+    {name:"Marigold",emoji:"🌼",latin:"Tagetes",min:35,opt:55,max:70,watering:"Every 2–3 days",depth:"15–20 cm",tips:"Avoid waterlogging."},
+    {name:"Portulaca",emoji:"🌸",latin:"Portulaca grandiflora",min:15,opt:30,max:45,watering:"Every 5–7 days",depth:"5–10 cm",tips:"Desert succulent. Let soil dry completely. Overwatering causes root rot. Full sun plant."},
+  ],
+  "Cash Crops":[
+    {name:"Sugarcane",emoji:"🎋",latin:"Saccharum officinarum",min:55,opt:70,max:85,watering:"Every 5–7 days",depth:"30–50 cm",tips:"High water crop. Drip irrigation saves 30–50%."},
+    {name:"Cotton",emoji:"🌿",latin:"Gossypium hirsutum",min:35,opt:55,max:70,watering:"Every 7–10 days",depth:"30–45 cm",tips:"Critical at flowering and boll development."},
+    {name:"Tea",emoji:"🍃",latin:"Camellia sinensis",min:55,opt:70,max:85,watering:"Every 3–4 days",depth:"20–30 cm",tips:"Sensitive to both drought and waterlogging."},
+    {name:"Jute",emoji:"🌿",latin:"Corchorus",min:65,opt:80,max:95,watering:"Frequent",depth:"15–25 cm",tips:"Needs consistent moisture."},
+  ]
+};
+const CAT_ICONS={"Vegetables":"🥦","Cereals & Pulses":"🌾","Fruits":"🍎","Flowers & Indoor":"🌸","Cash Crops":"💰"};
+
+let calDry=850,calWet=200,calibrated=false,calStep=0,calDryCap=null,calWetCap=null,liveRaw=null;
+let selCat=null,selCrop=null,threshold=30;
+let alertCount=0,pumpOn=false,alarmActive=false,audioCtx=null,alarmTimer=null;
+let buffer='',history=new Array(40).fill(null),chart=null;
+let port=null,reader=null,connected=false,lastWatered=null;
+
+function loadCal(){try{const d=localStorage.getItem('cal_dry'),w=localStorage.getItem('cal_wet');if(d&&w){calDry=parseInt(d);calWet=parseInt(w);calibrated=true;return true;}}catch(e){}return false;}
+function saveCal(d,w){try{localStorage.setItem('cal_dry',d);localStorage.setItem('cal_wet',w);}catch(e){}}
+
+function raw2pct(raw){
+  raw=Math.max(0,Math.min(1023,parseInt(raw)));
+  const lo=Math.min(calDry,calWet),hi=Math.max(calDry,calWet);
+  const clamped=Math.max(lo,Math.min(hi,raw));
+  let p=calDry>calWet?Math.round(((calDry-clamped)/(calDry-calWet))*100):Math.round(((clamped-calDry)/(calWet-calDry))*100);
+  return Math.max(0,Math.min(100,p));
+}
+
+function getTs(){const n=new Date();return[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>x.toString().padStart(2,'0')).join(':');}
+
+function log(msg,type='muted'){
+  const list=document.getElementById('log-list');
+  const div=document.createElement('div');div.className='log-entry '+type;
+  div.innerHTML=`<span class="log-time">${getTs()}</span><span class="log-msg">${msg}</span>`;
+  list.insertBefore(div,list.firstChild);
+  while(list.children.length>60)list.removeChild(list.lastChild);
+}
+
+function initChart(){
+  const ctx=document.getElementById('histChart').getContext('2d');
+  chart=new Chart(ctx,{type:'line',data:{labels:new Array(40).fill(''),datasets:[
+    {label:'Moisture %',data:[...history],borderColor:'#5db843',backgroundColor:'rgba(93,184,67,0.06)',borderWidth:2,pointRadius:0,tension:.4,fill:true,spanGaps:true},
+    {label:'Threshold',data:new Array(40).fill(threshold),borderColor:'#e04040',borderWidth:1.5,borderDash:[4,4],pointRadius:0,fill:false,spanGaps:true},
+    {label:'Optimal',data:new Array(40).fill(null),borderColor:'rgba(58,176,232,0.4)',borderWidth:1,borderDash:[2,4],pointRadius:0,fill:false,spanGaps:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+Math.round(c.raw)+'%'}}},
+    scales:{y:{min:0,max:100,grid:{color:'rgba(93,184,67,0.06)'},ticks:{color:'#3a5a28',font:{size:11,family:"'DM Mono'"},callback:v=>v+'%'}},
+    x:{grid:{display:false},ticks:{display:false}}},animation:{duration:300}}});
+}
+
+function buildCats(){
+  const g=document.getElementById('cat-row');g.innerHTML='';
+  Object.keys(CROPS).forEach(cat=>{
+    const b=document.createElement('button');b.className='cat-btn'+(cat===selCat?' active':'');
+    b.innerHTML=(CAT_ICONS[cat]||'🌿')+' '+cat;
+    b.onclick=()=>{selCat=cat;selCrop=null;buildCats();buildCrops();document.getElementById('crop-info').classList.remove('show');};
+    g.appendChild(b);
+  });
+}
+
+function buildCrops(){
+  const g=document.getElementById('crop-grid');g.innerHTML='';
+  if(!selCat)return;
+  CROPS[selCat].forEach(crop=>{
+    const c=document.createElement('div');c.className='crop-card'+(selCrop&&selCrop.name===crop.name?' active':'');
+    c.innerHTML=`<div class="crop-emoji">${crop.emoji}</div><div class="crop-name">${crop.name}</div><div class="crop-latin">${crop.latin}</div>`;
+    c.onclick=()=>pickCrop(crop);g.appendChild(c);
+  });
+}
+
+function pickCrop(crop){
+  selCrop=crop;threshold=crop.min;buildCrops();
+  document.getElementById('crop-info').classList.add('show');
+  document.getElementById('crop-info-grid').innerHTML=`
+    <div><div class="ci-label">Pump triggers at</div><div class="ci-val">&lt; ${crop.min}%</div><div class="ci-sub">soil too dry</div></div>
+    <div><div class="ci-label">Optimal range</div><div class="ci-val">${crop.min}–${crop.max}%</div><div class="ci-sub">ideal zone</div></div>
+    <div><div class="ci-label">Watering</div><div class="ci-val" style="font-size:12px;margin-top:2px">${crop.watering}</div></div>
+    <div><div class="ci-label">Root depth</div><div class="ci-val" style="font-size:12px;margin-top:2px">${crop.depth}</div></div>
+    <div style="grid-column:1/-1"><div class="ci-label">Tip</div><div class="ci-sub" style="color:var(--text2);margin-top:2px">${crop.tips}</div></div>`;
+  document.getElementById('mbar-fill').style.width=crop.opt+'%';
+  document.getElementById('mbar-marker').style.left=crop.min+'%';
+  document.getElementById('mbar-mid').textContent='pump at '+crop.min+'% / best '+crop.opt+'%';
+  document.getElementById('ss-crop').textContent=crop.emoji+' '+crop.name;
+  document.getElementById('ss-thresh').textContent='< '+crop.min+'%';
+  document.getElementById('m-thresh').textContent='< '+crop.min+'%';
+  document.getElementById('m-thresh-sub').textContent=crop.name+' min threshold';
+  document.getElementById('range-row').style.display='flex';
+  document.getElementById('range-pill').textContent=crop.min+'–'+crop.max+'%';
+  document.getElementById('chart-crop-lbl').textContent=crop.emoji+' '+crop.name;
+  if(chart){chart.data.datasets[1].data=new Array(40).fill(threshold);chart.data.datasets[2].data=new Array(40).fill(crop.opt);chart.update('none');}
+  updateLogicTxt();
+  log('Crop: '+crop.name+' — pump triggers below '+crop.min+'%','info');
+}
+
+function updateLogicTxt(){
+  const cr=selCrop;
+  document.getElementById('logic-txt').innerHTML=
+    `Sensor → Arduino reads every 2s<br>If moisture &lt; ${cr?cr.min:threshold}% → pump ON<br>If moisture ≥ ${cr?cr.min:threshold}% → pump OFF`;
+}
+
+function updateGauge(pct){
+  const total=252,arc=document.getElementById('g-arc');
+  arc.setAttribute('stroke-dashoffset',Math.round(total-(pct/100)*total));
+  const col=pct<threshold?'#e04040':pct<(selCrop?.opt||50)?'#e8a020':'#5db843';
+  arc.setAttribute('stroke',col);
+  if(selCrop){
+    document.getElementById('g-danger').setAttribute('stroke-dashoffset',Math.round(total-(selCrop.min/100)*total));
+    document.getElementById('g-opt').setAttribute('stroke-dashoffset',Math.round(total-(selCrop.opt/100)*total));
+  }
+  const ang=Math.PI-(pct/100)*Math.PI,r=68;
+  const nx=Math.round(100+r*Math.cos(ang)),ny=Math.round(110-r*Math.sin(ang));
+  const ndl=document.getElementById('g-needle');
+  ndl.setAttribute('x2',nx);ndl.setAttribute('y2',ny);ndl.setAttribute('stroke',col);
+  document.getElementById('g-val').textContent=pct+'%';
+  document.getElementById('g-val').style.color=col;
+  const zone=document.getElementById('g-zone'),zt=document.getElementById('g-zone-txt');
+  let zlbl,zcol;
+  if(pct<threshold){zlbl='too dry ⚠';zcol='#e04040';}
+  else if(selCrop&&pct<selCrop.opt){zlbl='ok range';zcol='#e8a020';}
+  else if(selCrop&&pct<=selCrop.max){zlbl='optimal ✓';zcol='#5db843';}
+  else{zlbl='well watered';zcol='#3ab0e8';}
+  zone.textContent=zlbl;zone.style.color=zcol;zone.style.borderColor=zcol;
+  zt.textContent=zlbl;zt.setAttribute('fill',zcol);
+}
+
+function updatePlant(pct){
+  const drops=pumpOn?'0.85':'0';
+  ['pd1','pd2','pd3'].forEach(id=>document.getElementById(id).setAttribute('opacity',drops));
+  const l1=document.getElementById('pl1'),l2=document.getElementById('pl2'),l3=document.getElementById('pl3');
+  let c1,c2,lbl,desc,tip,col;const cr=selCrop;
+  if(pct<15){c1='#7a5010';c2='#4a3010';lbl='Wilting!';desc='critical — water immediately';tip='';col='#e04040';}
+  else if(pct<threshold){c1='#a0b060';c2='#7a9040';lbl=cr?cr.name+' is thirsty':'Thirsty';desc='pump activated — watering now';tip=cr?'needs ≥ '+cr.min+'% moisture':'';col='#e8a020';}
+  else if(!cr||pct<cr.opt){c1='#3B6D11';c2='#27500A';lbl=cr?cr.name+' is healthy':'Healthy';desc='moisture in good range';tip=cr?'optimal: '+cr.opt+'%':'';col='#5db843';}
+  else{c1='#1D9E75';c2='#0F6E56';lbl=cr?cr.name+' is thriving!':'Thriving!';desc='perfectly hydrated';tip='';col='#3ab0e8';}
+  l1.setAttribute('fill',c1);l2.setAttribute('fill',c2);l3.setAttribute('fill',c2);
+  document.getElementById('plant-name').textContent=lbl;document.getElementById('plant-name').style.color=col;
+  document.getElementById('plant-desc').textContent=desc;document.getElementById('plant-desc').style.color=col==='#e04040'?'#e04040':'var(--text2)';
+  document.getElementById('plant-tip').textContent=tip;
+}
+
+function updatePump(on){
+  pumpOn=on;
+  const b=document.getElementById('pump-badge');
+  b.className='pump-badge '+(on?'on':'off');
+  document.getElementById('pump-lbl').textContent=on?'Pump running':'Pump off';
+  const fns=['fn-relay','fn-pump'],fas=['fa2','fa3'];
+  fns.forEach(id=>document.getElementById(id).classList.toggle('active',on));
+  fas.forEach(id=>document.getElementById(id).classList.toggle('active',on));
+}
+
+function updateFlow(pct){
+  const reading=pct!==null;
+  document.getElementById('fn-sensor').classList.toggle('active',reading);
+  document.getElementById('fn-arduino').classList.toggle('active',reading);
+  document.getElementById('fa1').classList.toggle('active',reading);
+}
+
+function playBeep(){
+  try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  [[880,0],[660,.15],[880,.3],[1100,.45]].forEach(([f,t])=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);o.type='square';o.frequency.value=f;
+    g.gain.setValueAtTime(0,audioCtx.currentTime+t);
+    g.gain.linearRampToValueAtTime(.07,audioCtx.currentTime+t+.04);
+    g.gain.linearRampToValueAtTime(0,audioCtx.currentTime+t+.14);
+    o.start(audioCtx.currentTime+t);o.stop(audioCtx.currentTime+t+.15);
+  });}catch(e){}
+}
+
+function triggerAlarm(pct){
+  if(alarmActive)return;
+  alarmActive=true;alertCount++;
+  document.getElementById('m-alerts').textContent=alertCount;
+  const cr=selCrop;
+  document.getElementById('alarm-title').textContent=(cr?cr.emoji+' '+cr.name:'Plant')+' needs water! Moisture at '+pct+'%';
+  document.getElementById('alarm-sub').textContent=cr?'Below minimum of '+cr.min+'% for '+cr.name+'. Pump activated.':'Below threshold. Pump activated.';
+  document.getElementById('alarm').classList.add('show');
+  playBeep();alarmTimer=setInterval(()=>{if(alarmActive)playBeep();},3000);
+  log('ALARM: '+(cr?cr.name:'Plant')+' at '+pct+'% — below '+threshold+'%','danger');
+}
+
+function dismissAlarm(){
+  alarmActive=false;document.getElementById('alarm').classList.remove('show');
+  if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null;}
+}
+
+function flashMetric(id){
+  const card=document.getElementById(id);if(!card)return;
+  card.classList.add('active');setTimeout(()=>card.classList.remove('active'),800);
+}
+
+function processValue(rawStr){
+  const raw=parseInt(rawStr.trim());
+  if(isNaN(raw)||raw<0||raw>1023)return;
+  liveRaw=raw;
+  if(calStep===1||calStep===2)calFeed(raw);
+  const pct=raw2pct(raw),wasBelow=pumpOn;
+  document.getElementById('m-raw').textContent=raw;
+  document.getElementById('m-pct').textContent=pct+'%';
+  document.getElementById('ss-time').textContent=getTs();
+  flashMetric('m-raw-card');flashMetric('m-pct-card');
+  const sub=document.getElementById('m-pct-sub');
+  if(!calibrated){sub.textContent='⚠ defaults used — calibrate!';sub.style.color='var(--amber)';}
+  else if(pct<threshold){sub.textContent='⚠ below minimum';sub.style.color='var(--red)';}
+  else if(pct>=(selCrop?.opt||50)){sub.textContent='✓ in optimal zone';sub.style.color='var(--green)';}
+  else{sub.textContent='getting low';sub.style.color='var(--amber)';}
+  updateGauge(pct);updatePlant(pct);updateFlow(pct);
+  history.push(pct);if(history.length>40)history.shift();
+  if(chart){chart.data.datasets[0].data=[...history];chart.update('none');}
+  if(pct<threshold){updatePump(true);triggerAlarm(pct);}
+  else{
+    updatePump(false);
+    if(wasBelow){
+      dismissAlarm();
+      const n=new Date();lastWatered=[n.getHours(),n.getMinutes()].map(x=>x.toString().padStart(2,'0')).join(':');
+      document.getElementById('m-watered').textContent=lastWatered;
+      log('Pump off — moisture restored to '+pct+'%','success');
+    }else{
+      log('Reading: raw='+raw+' → '+pct+'%'+(selCrop?' ['+selCrop.name+']':''),'muted');
+    }
+  }
+}
+
+function updateCalUI(){
+  const badge=document.getElementById('cal-badge');
+  if(calibrated){
+    badge.className='cal-badge done';
+    document.getElementById('cal-badge-lbl').textContent='↺ Recalibrate';
+    document.getElementById('ss-cal').textContent='✓ dry='+calDry+' wet='+calWet;
+    document.getElementById('ss-cal').style.color='var(--green)';
+  }else{
+    badge.className='cal-badge pending';
+    document.getElementById('cal-badge-lbl').textContent='Not calibrated';
+    document.getElementById('ss-cal').textContent='⚠ not calibrated';
+    document.getElementById('ss-cal').style.color='var(--amber)';
+  }
+  document.getElementById('m-cal').textContent=calDry+' / '+calWet;
+  document.getElementById('m-cal-sub').textContent=calibrated?'✓ your soil calibration':'default — please calibrate';
+}
+
+function openCalModal(){
+  document.getElementById('cal-modal').classList.remove('hidden');
+  calStep=0;showCalStep(0);
+  const saved=loadCal();
+  const row=document.getElementById('cal-saved-row');
+  if(saved){row.style.display='flex';document.getElementById('cal-saved-txt').textContent='Loaded: dry='+calDry+', wet='+calWet;}
+  else{row.style.display='none';}
+  const noSer=document.getElementById('no-cal-serial');
+  const startBtn=document.getElementById('cal-start-btn');
+  if(!connected){noSer.style.display='block';startBtn.disabled=true;}
+  else{noSer.style.display='none';startBtn.disabled=false;}
+}
+
+function closeCalModal(){document.getElementById('cal-modal').classList.add('hidden');}
+
+function showCalStep(n){
+  [0,1,2,3].forEach(i=>{
+    const el=document.getElementById('cs'+i);if(el)el.style.display=i===n?'block':'none';
+    const dot=document.getElementById('csd'+i);
+    if(dot)dot.className='csd'+(i<n?' done':i===n?' active':'');
+  });
+}
+
+function goCalStep(n){calStep=n;showCalStep(n);}
+
+function startCal(){calDryCap=null;calWetCap=null;goCalStep(1);}
+
+function calFeed(raw){
+  if(calStep===1){
+    document.getElementById('cal-dry-live').textContent=raw;
+    document.getElementById('cal-dry-bar').style.width=Math.round((raw/1023)*100)+'%';
+    document.getElementById('cal-dry-prog').textContent='reading: '+raw+' — press capture when stable';
+    document.getElementById('cal-dry-btn').disabled=false;
+  }else if(calStep===2){
+    document.getElementById('cal-wet-live').textContent=raw;
+    document.getElementById('cal-wet-bar').style.width=Math.round((raw/1023)*100)+'%';
+    document.getElementById('cal-wet-prog').textContent='reading: '+raw+' — press capture when stable';
+    document.getElementById('cal-wet-btn').disabled=false;
+  }
+}
+
+function captureDry(){
+  if(liveRaw===null)return;
+  calDryCap=liveRaw;
+  document.getElementById('cal-dry-prog').textContent='✓ Captured: '+calDryCap;
+  document.getElementById('cal-dry-btn').disabled=true;
+  setTimeout(()=>goCalStep(2),500);
+}
+
+function captureWet(){
+  if(liveRaw===null)return;
+  calWetCap=liveRaw;
+  document.getElementById('cal-wet-prog').textContent='✓ Captured: '+calWetCap;
+  document.getElementById('cal-wet-btn').disabled=true;
+  document.getElementById('r-dry').textContent=calDryCap;
+  document.getElementById('r-wet').textContent=calWetCap;
+  const spread=Math.abs(calDryCap-calWetCap);
+  const q=spread>400?'🟢 Excellent':spread>200?'🟡 Good':'🔴 Low — try wider dry/wet samples';
+  document.getElementById('cal-result-desc').textContent='Spread: '+spread+' units. Quality: '+q+'. All readings will now auto-map to your sensor range.';
+  setTimeout(()=>goCalStep(3),500);
+}
+
+function finishCal(){
+  if(calDryCap!==null&&calWetCap!==null){calDry=calDryCap;calWet=calWetCap;saveCal(calDry,calWet);calibrated=true;updateCalUI();log('Calibration saved — dry='+calDry+', wet='+calWet,'success');}
+  closeCalModal();
+}
+
+async function startReading(){
+  const dec=new TextDecoderStream();port.readable.pipeTo(dec.writable);
+  const stream=dec.readable.getReader();reader=stream;
+  log('Serial open — reading sensor...','info');
+  if(!calibrated)setTimeout(()=>openCalModal(),800);
+  try{while(true){const{value,done}=await stream.read();if(done)break;buffer+=value;const lines=buffer.split('\n');buffer=lines.pop();for(const l of lines){const nums=l.match(/\d+/g);if(nums)nums.forEach(n=>processValue(n));}}}
+  catch(e){if(connected){log('Serial error: '+e.message,'danger');setDisconn();}}
+}
+
+function setConn(){
+  connected=true;document.getElementById('connect-btn').className='connect-btn connected';
+  document.getElementById('btn-lbl').textContent='Disconnect';
+  document.getElementById('ss-conn').textContent='connected';
+  log('Connected to Arduino','success');
+}
+function setDisconn(){
+  connected=false;document.getElementById('connect-btn').className='connect-btn disconnected';
+  document.getElementById('btn-lbl').textContent='Reconnect';
+  document.getElementById('ss-conn').textContent='offline';
+  updatePump(false);log('Disconnected','warn');
+}
+
+async function toggleConn(){
+  if(!('serial' in navigator)){document.getElementById('no-serial').style.display='block';log('Web Serial not supported — use Chrome','danger');return;}
+  if(connected){try{if(reader){await reader.cancel();reader=null;}if(port){await port.close();port=null;}}catch(e){}setDisconn();return;}
+  try{port=await navigator.serial.requestPort();await port.open({baudRate:9600});setConn();startReading();}
+  catch(e){if(e.name!=='NotFoundError')log('Failed: '+e.message,'danger');}
+}
+
+if(!('serial' in navigator))document.getElementById('no-serial').style.display='block';
+const hadCal=loadCal();
+updateCalUI();buildCats();buildCrops();initChart();updateLogicTxt();
+log('Dashboard ready — select a crop then connect Arduino','info');
+if(hadCal)log('Loaded calibration: dry='+calDry+', wet='+calWet,'success');
+else log('No calibration — defaults active. Connect Arduino then calibrate for accuracy.','warn');
+</script>
+</body>
+</html>
