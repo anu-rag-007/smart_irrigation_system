@@ -53,7 +53,7 @@
 
 ## 🎯 About the Project
 
-This project is a **low-cost automatic irrigation system** that uses a soil moisture sensor to detect when a plant needs water and automatically activates a pump to water it. The system is controlled by an Arduino Uno microcontroller and costs only ₹625 to build.
+This project is a **low-cost automatic irrigation system** that uses a soil moisture sensor to detect when a plant needs water and automatically activates a pump to water it. The system is controlled by an Arduino Uno microcontroller and costs only around ₹625 to build.
 
 A live web dashboard built in HTML and JavaScript connects to the Arduino via USB and displays real-time moisture readings, pump status, moisture history chart, and sounds an alarm when the plant needs water. The dashboard supports 28 different crops and plants with individual moisture thresholds.
 
@@ -89,11 +89,11 @@ Our smart irrigation system directly addresses these problems by automating the 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    SYSTEM FLOW                          │
-│                                                         │
-│  Soil Sensor  →  Arduino Uno  →  Relay Module  →  Pump │
-│  (reads every      (compares      (switches         (waters  │
-│   2 seconds)        value)         ON/OFF)          plant)  │
+│                    SYSTEM FLOW                                    │
+│                                                                   │
+│  Soil Sensor  →  Arduino Uno  →  Relay Module  →  Pump          │
+│  (reads every      (compares      (switches         (waters       │
+│   2 seconds)        value)         ON/OFF)          plant)        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -153,7 +153,6 @@ The relay module used in this project is **Active LOW** — meaning it turns ON 
 | 9 | Plastic Water Container | Home reuse | 1 | Free |
 | 10 | USB Cable | Already available | 1 | Free |
 | | **TOTAL** | | | **₹625** |
-| | **Budget remaining** | | | **₹375** |
 
 ---
 
