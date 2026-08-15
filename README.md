@@ -88,13 +88,13 @@ Our smart irrigation system directly addresses these problems by automating the 
 ## ⚙️ How It Works
 
 ```
-┌─────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────────────┐
 │                    SYSTEM FLOW                                    │
 │                                                                   │
-│  Soil Sensor  →  Arduino Uno  →  Relay Module  →  Pump          │
+│  Soil Sensor  →  Arduino Uno  →  Relay Module  →  Pump            │
 │  (reads every      (compares      (switches         (waters       │
 │   2 seconds)        value)         ON/OFF)          plant)        │
-└─────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### Logic
@@ -197,7 +197,6 @@ The relay module used in this project is **Active LOW** — meaning it turns ON 
   Group: Arshan Khan, Anurag Sharma, Gaurav Rawat, 
          Sahil Bora, Jay Manral
   Subject: Environmental Impact Analysis
-  Cost: Under Rs.1000
   
   WIRING:
   Sensor AO  → Arduino A0
@@ -368,7 +367,7 @@ After testing the working prototype:
 - Dashboard displays accurate moisture percentage after calibration
 - Alarm sounds immediately when moisture drops
 - System runs continuously without any manual intervention
-- Total cost came to ₹625 — ₹375 under the ₹1000 budget
+- Total cost came to ₹625 which is quite feasible.
 
 ---
 
