@@ -21,11 +21,11 @@
 
 | Name | Role |
 |---|---|
-| Arshan Khan | Circuit design & hardware assembly |
-| Anurag Sharma | Arduino programming & testing |
-| Gaurav Rawat | Dashboard development & calibration |
-| Sahil Bora | Documentation & presentation |
-| Jay Manral | Testing, debugging & demonstration |
+| ARSHAN KHAN | Circuit design & hardware assembly |
+| ANURAG SHARMA | Arduino programming & testing |
+| GAURAV RAWAT | Dashboard development & calibration |
+| SAHIL BORA | Documentation & presentation |
+| JAY MANRAL | Testing, debugging & demonstration |
 
 **Subject:** Environmental Impact Analysis  
 **Institution:** Class Project  
